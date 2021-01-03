@@ -187,24 +187,24 @@ class PredicateNode(AbsNonterminalNode):
             else:
                 self.add_key(KeyFunctionImpl(predicate))
 
-    async def route(self, args, store: KeyStore) -> AsyncIterable[TerminalNode]:
+    async def route(self, args, store: KeyStore) -> Set[TerminalNode]:
+        res = set()
         for predicate, nodes in self._successors.items():
             try:
                 pred_res = await store(predicate, args, store)
             except RouteException as e:
-                yield e
+                res.add(e)
                 continue
             except Exception as e:
-                yield RouteInternalException(e)
+                res.add(RouteInternalException(e))
                 continue
             if pred_res:
                 for node in nodes:
                     if isinstance(node, TerminalNode):
-                        yield node
+                        res.add(node)
                     elif isinstance(node, NonterminalNode):
-                        async for terminal in node.route(args, store):
-                            yield terminal
-
+                        res |= await node.route(args, store)
+        return res
 
 class EqualNode(AbsNonterminalNode):
     def __init__(self, *values, key: KeyFunction_T = first_argument, key_id=None):
@@ -223,15 +223,14 @@ class EqualNode(AbsNonterminalNode):
     def new(self) -> "EqualNode":
         return EqualNode(key=self._key)
 
-    async def route(self, args, store: KeyStore) -> AsyncIterable[TerminalNode]:
+    async def route(self, args, store: KeyStore) -> Set[TerminalNode]:
+        res = set()
         try:
             key = await store(self._key, args, store)
         except RouteException as e:
-            yield e
-            return
+            return {e}
         except Exception as e:
-            yield RouteInternalException(e)
-            return
+            return {RouteInternalException(e)}
 
         if not isinstance(key, Hashable):
             raise ValueError(f'Key {key} to EqualNode must be Hashable!')
@@ -241,10 +240,10 @@ class EqualNode(AbsNonterminalNode):
 
         for node in self._successors[key]:
             if isinstance(node, TerminalNode):
-                yield node
+                res.add(node)
             elif isinstance(node, NonterminalNode):
-                async for terminal in node.route(args, store):
-                    yield terminal
+                res |= await node.route(args, store)
+        return res
 
 
 @final
@@ -257,21 +256,21 @@ class ProcessorNode(AbsNonterminalNode):
             else:
                 self.add_key(KeyFunctionImpl(processor))
 
-    async def route(self, args, store: KeyStore) -> AsyncIterable[TerminalNode]:
+    async def route(self, args, store: KeyStore) -> Set[TerminalNode]:
+        res = set()
         for processor, nodes in self._successors.items():
             try:
                 await store(processor, args, store)
             except RouteException as e:
-                yield e
+                res.add(e)
             except Exception as e:
-                yield RouteInternalException(e)
-                continue
+                res.add(RouteInternalException(e))
             for node in nodes:
                 if isinstance(node, TerminalNode):
-                    yield node
+                    res.add(node)
                 elif isinstance(node, NonterminalNode):
-                    async for terminal in node.route(args, store):
-                        yield terminal
+                    res |= await node.route(args, store)
+        return res
 
 
 def make_graph_deco(node_cls: Type[NonterminalNode]) -> Callable[..., Graph]:

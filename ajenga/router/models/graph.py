@@ -220,7 +220,7 @@ class Graph:
         g._or(other)
         return g
 
-    async def route(self, *args, **kwargs) -> Set[RouteResult_T]:
+    def route(self, *args, **kwargs) -> Set[RouteResult_T]:
         """Forward input to the graph, asynchronous invoke terminals and yield
 
         :param args:
@@ -230,17 +230,19 @@ class Graph:
         if not self.closed:
             raise ValueError("Cannot apply on a open graph!")
 
-        res = set()
+        return self.start.route(*args, **kwargs)
 
-        async for routed in self.start.route(*args, **kwargs):
-            if isinstance(routed, TerminalNode):
-                res.add(routed)
-            elif isinstance(routed, RouteException):
-                res.add(routed)
-            else:
-                raise ValueError(routed)
+        # res = set()
 
-        return set(res)
+        # for routed in await self.start.route(*args, **kwargs):
+        #     if isinstance(routed, TerminalNode):
+        #         res.add(routed)
+        #     elif isinstance(routed, RouteException):
+        #         res.add(routed)
+        #     else:
+        #         raise ValueError(routed)
+
+        # return set(res)
 
     def debug_fmt(self, indent=1) -> str:
         """Format the debug string

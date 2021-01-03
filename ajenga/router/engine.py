@@ -1,6 +1,7 @@
 from ajenga.typing import AsyncIterable
 from ajenga.typing import Callable
 from ajenga.typing import Iterable
+from ajenga.typing import Set
 from ajenga.typing import Type
 from ajenga.typing import final
 
@@ -55,7 +56,7 @@ class Engine:
         self._graph.remove_terminals(terminals)
         self._dirty = True
 
-    async def forward(self, *args, **kwargs) -> AsyncIterable:
+    async def forward(self, *args, **kwargs) -> Set:
         if self._dirty:
             self._graph_impl = self._graph.copy()
             self._dirty = False
@@ -65,8 +66,10 @@ class Engine:
         terminals = filter(lambda x: isinstance(x, TerminalNode), routed)
         exceptions = filter(lambda x: isinstance(x, RouteException), routed)
 
-        for res in exceptions:
-            yield res.args[0]
+        res = []
+
+        for e in exceptions:
+            res.append(e.args[0])
 
         executor = self._executor_factory()
 
@@ -74,8 +77,8 @@ class Engine:
             executor.create_task(terminal.forward,
                                  priority=terminal.priority if hasattr(terminal, 'priority') else Priority.Default)
 
-        async for res in executor.run(args, store):
-            yield res
+        res.extend(await executor.run(args, store))
+        return res
 
     def clear(self):
         self._graph.clear()

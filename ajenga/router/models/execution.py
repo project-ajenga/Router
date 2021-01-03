@@ -186,19 +186,22 @@ class SimpleExecutor(Executor):
         self.tasks.append(task)
 
     async def run(self, *args, **kwargs):
+        res = []
         pending = [task.run(*args, **kwargs) for task in self.tasks]
         self.tasks.clear()
         while pending:
             done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
             for future in done:
                 try:
-                    yield await future
+                    result = await future
+                    res.append(result)
                 except _PauseException:
                     pass
                 except _ReturnException as e:
-                    yield e.args[0] if e.args else None
+                    res.append(e.args[0] if e.args else None)
                 except Exception as e:
-                    yield e
+                    res.append(e)
+        return res
 
 
 class PriorityExecutor(Executor):

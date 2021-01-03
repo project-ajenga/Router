@@ -109,14 +109,13 @@ class NonterminalNode(Node, ABC):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    async def route(self, *args, **kwargs) -> AsyncIterable[TerminalNode]:
+    async def route(self, *args, **kwargs) -> Set[TerminalNode]:
         """Get terminals routing from the node given arguments
 
         :param args:
         :param kwargs:
         :return: AsyncIterator of Terminals
         """
-        yield
         raise NotImplementedError
 
     def copy(self, node_map: Dict[Node, Node] = ...) -> "NonterminalNode":
@@ -275,10 +274,11 @@ class IdentityNode(NonterminalNode, AbsNode):
         else:
             return f'{" ":{indent}}<{type(self).__name__} {str(self)}: \n{out_str}{" ":{indent}}>'
 
-    async def route(self, *args, **kwargs) -> AsyncIterable[TerminalNode]:
+    async def route(self, *args, **kwargs) -> Set[TerminalNode]:
+        res = set()
         for node in self._successors:
             if isinstance(node, TerminalNode):
-                yield node
+                res.add(node)
             elif isinstance(node, NonterminalNode):
-                async for terminal in node.route(*args, **kwargs):
-                    yield terminal
+                res |= await node.route(*args, **kwargs)
+        return res
