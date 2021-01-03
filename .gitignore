@@ -186,3 +186,6 @@ typings/
 .idea
 .vscode
 dev
+
+tests
+test*.py
