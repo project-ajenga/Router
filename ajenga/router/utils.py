@@ -75,7 +75,6 @@ async def consume_async_iterator(ait: AsyncIterable[T],
                                  collection_factory: Callable[..., Collection[T]] = list,
                                  collect_function: Callable[[Collection[T], T], Any] = list.append
                                  ) -> Collection[T]:
-    return await ait
     collection = collection_factory()
     async for x in ait:
         collect_function(collection, x)

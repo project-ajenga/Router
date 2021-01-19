@@ -1,6 +1,9 @@
 from dataclasses import dataclass, field
-from typing import Any, Tuple, List, Dict
+from typing import Any, Tuple, List, Dict, TYPE_CHECKING
 from .keystore import KeyStore
+
+if TYPE_CHECKING:
+    from .models import TerminalNode
 
 
 @dataclass
@@ -32,7 +35,7 @@ class RouteState:
 
 @dataclass
 class RouteResult:
-    node: Any
+    node: "TerminalNode"
     mapping: Dict = field(hash=False, compare=False)
 
     def __hash__(self) -> int:

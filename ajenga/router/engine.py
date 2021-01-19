@@ -67,8 +67,8 @@ class Engine:
         state.store['_store'] = state.store
         state.store['_state'] = state
         routed = await self._graph_impl.route(state)
-        terminals = filter(lambda x: isinstance(x, RouteResult), routed)
-        exceptions = filter(lambda x: isinstance(x, RouteException), routed)
+        terminals: Iterable[RouteResult] = filter(lambda x: isinstance(x, RouteResult), routed)
+        exceptions: Iterable[RouteException] = filter(lambda x: isinstance(x, RouteException), routed)
 
         for e in exceptions:
             yield e.args[0]
