@@ -8,8 +8,13 @@ from ajenga.typing import Awaitable
 from ajenga.typing import Callable
 from ajenga.typing import Collection
 from ajenga.typing import Coroutine
-from ajenga.typing import List
+from ajenga.typing import List, Dict
 from ajenga.typing import Union
+from ajenga.typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .state import RouteState
+
 
 T = typing.TypeVar("T")
 
@@ -40,18 +45,20 @@ def wrap_function(func: Callable[..., Union[Awaitable[T], T]]) -> Callable[..., 
             raise TypeError("Invalid parameter declaration !")
 
     @wraps(func)
-    async def wrapper(args, store):
-        if len(args) > _args_num and not _args_extra:
-            kwargs_keys = _kwargs_keys[len(args) - _args_num:]
+    async def wrapper(state: "RouteState", mapping: Dict):
+        if len(state.args) > _args_num and not _args_extra:
+            kwargs_keys = _kwargs_keys[len(state.args) - _args_num:]
         else:
             kwargs_keys = _kwargs_keys
 
         if _kwargs_extra:
-            kwargs = dict(filter(lambda e: isinstance(e[0], str), store.items()))
+            kwargs = {**dict(filter(lambda e: isinstance(e[0], str), state.store.items())), 
+                      **dict(map(lambda e: (e[0], state.store[e[1]]), mapping.items()))}
         else:
-            kwargs = dict(filter(lambda e: e[0] in kwargs_keys, store.items()))
+            kwargs = {**dict(filter(lambda e: e[0] in kwargs_keys, state.store.items())), 
+                      **dict(map(lambda e: (e[0], state.store[e[1]]), filter(lambda e: e[0] in kwargs_keys, mapping.items())))}
 
-        return await _func(*args, **kwargs) if _async else _func(*args, **kwargs)
+        return await _func(*state.args, **kwargs) if _async else _func(*state.args, **kwargs)
 
     return wrapper
 
@@ -68,6 +75,7 @@ async def consume_async_iterator(ait: AsyncIterable[T],
                                  collection_factory: Callable[..., Collection[T]] = list,
                                  collect_function: Callable[[Collection[T], T], Any] = list.append
                                  ) -> Collection[T]:
+    return await ait
     collection = collection_factory()
     async for x in ait:
         collect_function(collection, x)

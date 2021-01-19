@@ -27,6 +27,8 @@ from .keyfunc import PredicateFunction_T
 from .keyfunc import first_argument
 from .keystore import KeyStore
 from .utils import wrap_function
+from .state import RouteState
+from .models import RouteResult_T
 
 
 class RawHandlerNode(TerminalNode, AbsNode):
@@ -187,11 +189,11 @@ class PredicateNode(AbsNonterminalNode):
             else:
                 self.add_key(KeyFunctionImpl(predicate))
 
-    async def route(self, args, store: KeyStore) -> Set[TerminalNode]:
+    async def _route(self, state: RouteState) -> Set[RouteResult_T]:
         res = set()
         for predicate, nodes in self._successors.items():
             try:
-                pred_res = await store(predicate, args, store)
+                pred_res = await state.store(predicate, state)
             except RouteException as e:
                 res.add(e)
                 continue
@@ -201,9 +203,9 @@ class PredicateNode(AbsNonterminalNode):
             if pred_res:
                 for node in nodes:
                     if isinstance(node, TerminalNode):
-                        res.add(node)
+                        res.add(state.wrap(node))
                     elif isinstance(node, NonterminalNode):
-                        res |= await node.route(args, store)
+                        res |= await node.route(state)
         return res
 
 class EqualNode(AbsNonterminalNode):
@@ -223,10 +225,10 @@ class EqualNode(AbsNonterminalNode):
     def new(self) -> "EqualNode":
         return EqualNode(key=self._key)
 
-    async def route(self, args, store: KeyStore) -> Set[TerminalNode]:
+    async def _route(self, state: RouteState) -> Set[RouteResult_T]:
         res = set()
         try:
-            key = await store(self._key, args, store)
+            key = await state.store(self._key, state)
         except RouteException as e:
             return {e}
         except Exception as e:
@@ -236,13 +238,13 @@ class EqualNode(AbsNonterminalNode):
             raise ValueError(f'Key {key} to EqualNode must be Hashable!')
 
         if key not in self._successors:
-            return
+            return res
 
         for node in self._successors[key]:
             if isinstance(node, TerminalNode):
-                res.add(node)
+                res.add(state.wrap(node))
             elif isinstance(node, NonterminalNode):
-                res |= await node.route(args, store)
+                res |= await node.route(state)
         return res
 
 
@@ -256,20 +258,20 @@ class ProcessorNode(AbsNonterminalNode):
             else:
                 self.add_key(KeyFunctionImpl(processor))
 
-    async def route(self, args, store: KeyStore) -> Set[TerminalNode]:
+    async def _route(self, state: RouteState) -> Set[RouteResult_T]:
         res = set()
         for processor, nodes in self._successors.items():
             try:
-                await store(processor, args, store)
+                await state.store(processor, state)
             except RouteException as e:
                 res.add(e)
             except Exception as e:
                 res.add(RouteInternalException(e))
             for node in nodes:
                 if isinstance(node, TerminalNode):
-                    res.add(node)
+                    res.add(state.wrap(node))
                 elif isinstance(node, NonterminalNode):
-                    res |= await node.route(args, store)
+                    res |= await node.route(state)
         return res
 
 

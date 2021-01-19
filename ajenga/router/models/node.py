@@ -6,7 +6,10 @@ from ajenga.typing import Hashable
 from ajenga.typing import Iterable
 from ajenga.typing import Set
 from ajenga.typing import Tuple
-from ajenga.typing import final
+from ajenga.typing import final, TYPE_CHECKING
+
+from ..state import RouteState
+from . import RouteResult_T
 
 
 class Node(ABC):
@@ -109,7 +112,18 @@ class NonterminalNode(Node, ABC):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    async def route(self, *args, **kwargs) -> Set[TerminalNode]:
+    async def route(self, state: RouteState) -> Set[RouteResult_T]:
+        """Get terminals routing from the node given arguments
+
+        :param args:
+        :param kwargs:
+        :return: AsyncIterator of Terminals
+        """
+        # print(f'<DEBUG> {type(self).__name__}')
+        with state:
+            return await self._route(state)
+
+    async def _route(self, state: RouteState) -> Set[RouteResult_T]:
         """Get terminals routing from the node given arguments
 
         :param args:
@@ -274,11 +288,11 @@ class IdentityNode(NonterminalNode, AbsNode):
         else:
             return f'{" ":{indent}}<{type(self).__name__} {str(self)}: \n{out_str}{" ":{indent}}>'
 
-    async def route(self, *args, **kwargs) -> Set[TerminalNode]:
+    async def _route(self, state: RouteState) -> Set[RouteResult_T]:
         res = set()
         for node in self._successors:
             if isinstance(node, TerminalNode):
-                res.add(node)
+                res.add(state.wrap(node))
             elif isinstance(node, NonterminalNode):
-                res |= await node.route(*args, **kwargs)
+                res |= await node.route(state)
         return res

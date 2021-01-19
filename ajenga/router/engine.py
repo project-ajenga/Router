@@ -1,3 +1,4 @@
+from typing import Tuple
 from ajenga.typing import AsyncIterable
 from ajenga.typing import Callable
 from ajenga.typing import Iterable
@@ -13,6 +14,7 @@ from .models import Priority
 from .models import TerminalNode
 from .models.execution import PriorityExecutor
 from .std import HandlerNode
+from .state import RouteResult, RouteState
 
 
 class Engine:
@@ -56,29 +58,33 @@ class Engine:
         self._graph.remove_terminals(terminals)
         self._dirty = True
 
-    async def forward(self, *args, **kwargs) -> Set:
+    async def forward(self, *args, **kwargs) -> AsyncIterable:
         if self._dirty:
             self._graph_impl = self._graph.copy()
             self._dirty = False
 
-        store = KeyStore(kwargs)
-        routed = await self._graph_impl.route(args, store)
-        terminals = filter(lambda x: isinstance(x, TerminalNode), routed)
+        state = RouteState(args, KeyStore(kwargs))
+        state.store['_store'] = state.store
+        state.store['_state'] = state
+        routed = await self._graph_impl.route(state)
+        terminals = filter(lambda x: isinstance(x, RouteResult), routed)
         exceptions = filter(lambda x: isinstance(x, RouteException), routed)
 
-        res = []
-
         for e in exceptions:
-            res.append(e.args[0])
+            yield e.args[0]
 
         executor = self._executor_factory()
 
-        for terminal in terminals:
+        for r in terminals:
+            terminal = r.node
+            mapping = r.mapping
             executor.create_task(terminal.forward,
-                                 priority=terminal.priority if hasattr(terminal, 'priority') else Priority.Default)
-
-        res.extend(await executor.run(args, store))
-        return res
+                                 priority=terminal.priority if hasattr(terminal, 'priority') else Priority.Default,
+                                 args=(state, mapping,),
+                                 )
+    
+        async for res in executor.run():
+            yield res
 
     def clear(self):
         self._graph.clear()

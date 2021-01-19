@@ -47,16 +47,18 @@ class Task:
                  loop=None,
                  priority=Priority.Default,
                  state=None,
-                 **kwargs) -> None:
+                 args=None,
+                 kwargs=None,
+                 **_kwargs) -> None:
         self.fn = fn
         self.loop = loop or asyncio.get_event_loop()
         self.priority = priority
         self.state = state or {}
-        for key, value in kwargs.items():
+        for key, value in _kwargs.items():
             setattr(self, key, value)
 
-        self.args = ()
-        self.kwargs = {}
+        self.args = args or ()
+        self.kwargs = kwargs or {}
 
         self._task = None
         self.executor = None
@@ -66,6 +68,8 @@ class Task:
         self.cancelled = False
 
     def run(self, *args, **kwargs):
+        if not args and not kwargs:
+            args, kwargs = self.args, self.kwargs
         if self.running and self.paused:
             return self.resume(*args, **kwargs)
         elif self.running:
@@ -158,6 +162,10 @@ class Task:
         self._future_pause.set_exception(exception)
         return self._future_return
 
+    @staticmethod
+    def current() -> "Task":
+        return _task_context.get()
+
 
 class Executor(ABC):
 
@@ -170,6 +178,10 @@ class Executor(ABC):
     async def run(self, *args, **kwargs) -> AsyncIterable:
         raise NotImplementedError
         yield
+
+    @staticmethod
+    def current() -> "Executor":
+        return _executor_context.get()
 
 
 class SimpleExecutor(Executor):
@@ -186,22 +198,19 @@ class SimpleExecutor(Executor):
         self.tasks.append(task)
 
     async def run(self, *args, **kwargs):
-        res = []
         pending = [task.run(*args, **kwargs) for task in self.tasks]
         self.tasks.clear()
         while pending:
             done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
             for future in done:
                 try:
-                    result = await future
-                    res.append(result)
+                    yield await future
                 except _PauseException:
                     pass
                 except _ReturnException as e:
-                    res.append(e.args[0] if e.args else None)
+                    yield e.args[0] if e.args else None
                 except Exception as e:
-                    res.append(e)
-        return res
+                    yield e
 
 
 class PriorityExecutor(Executor):
