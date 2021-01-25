@@ -1,6 +1,7 @@
 import asyncio
 import inspect
 import typing
+import warnings
 from functools import wraps
 from ajenga.typing import Any
 from ajenga.typing import AsyncIterable
@@ -19,6 +20,11 @@ if TYPE_CHECKING:
 T = typing.TypeVar("T")
 
 
+class Alias:
+    def __init__(self, name) -> None:
+        self.name = name
+
+
 def wrap_function(func: Callable[..., Union[Awaitable[T], T]]) -> Callable[..., Awaitable[T]]:
     _func = func
     _async = asyncio.iscoroutinefunction(func)
@@ -27,36 +33,46 @@ def wrap_function(func: Callable[..., Union[Awaitable[T], T]]) -> Callable[..., 
     sig = inspect.signature(func)
     _args_num = 0
     _args_extra = False
-    _kwargs_keys = []
-    _kwargs_extra = False
+    _kwargs_binds = []
 
     for param in sig.parameters.values():
         if param.kind == inspect.Parameter.POSITIONAL_ONLY:
             _args_num += 1
         elif param.kind == inspect.Parameter.VAR_POSITIONAL:
             _args_extra = True
+            _args_num += len(_kwargs_binds)
+            _kwargs_binds.clear()
         elif param.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD:
-            _kwargs_keys.append(param.name)
+            if isinstance(param.default, Alias):
+                _kwargs_binds.append((param.name, param.default.name))
+            else:
+                _kwargs_binds.append((param.name, param.name))
         elif param.kind == inspect.Parameter.KEYWORD_ONLY:
-            _kwargs_keys.append(param.name)
+            if isinstance(param.default, Alias):
+                _kwargs_binds.append((param.name, param.default.name))
+            else:
+                _kwargs_binds.append((param.name, param.name))
         elif param.kind == inspect.Parameter.VAR_KEYWORD:
-            _kwargs_extra = True
+            warnings.warn("Variational keyword parameter is ignored in handler !")
         else:
             raise TypeError("Invalid parameter declaration !")
 
     @wraps(func)
     async def wrapper(state: "RouteState", mapping: Dict):
-        if len(state.args) > _args_num and not _args_extra:
-            kwargs_keys = _kwargs_keys[len(state.args) - _args_num:]
-        else:
-            kwargs_keys = _kwargs_keys
 
-        if _kwargs_extra:
-            kwargs = {**dict(filter(lambda e: isinstance(e[0], str), state.store.items())), 
-                      **dict(map(lambda e: (e[0], state.store[e[1]]), mapping.items()))}
+        if len(state.args) > _args_num and not _args_extra:
+            kwargs_binds = _kwargs_binds[len(state.args) - _args_num:]
         else:
-            kwargs = {**dict(filter(lambda e: e[0] in kwargs_keys, state.store.items())), 
-                      **dict(map(lambda e: (e[0], state.store[e[1]]), filter(lambda e: e[0] in kwargs_keys, mapping.items())))}
+            kwargs_binds = _kwargs_binds
+
+        kwargs = {}
+        for name, key in kwargs_binds:
+            if key in mapping:
+                kwargs[name] = state.store[mapping[key]]
+            elif key in state.store:
+                kwargs[name] = state.store[key]
+            else:
+                raise TypeError(f"Keyword Parameter {key} not found in context !")
 
         return await _func(*state.args, **kwargs) if _async else _func(*state.args, **kwargs)
 
