@@ -12,7 +12,7 @@ T = TypeVar('T')
 
 
 class KeyStore:
-    _tasks: Dict[Union[Hashable, KeyFunction], Any]
+    _tasks: Dict[Union[Hashable, KeyFunction], asyncio.Task]
     _store: Dict[Union[Hashable, KeyFunction], Any]
 
     def __init__(self, items: Mapping = None):

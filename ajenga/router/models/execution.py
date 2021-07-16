@@ -181,7 +181,7 @@ class Executor(ABC):
 
     @staticmethod
     def current() -> "Executor":
-        return _executor_context.get()
+        return Task.current().executor
 
 
 class SimpleExecutor(Executor):
