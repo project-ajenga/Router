@@ -1,4 +1,4 @@
-from setuptools import setup, find_namespace_packages
+from setuptools import find_namespace_packages, setup
 
 with open('README.md', 'r', encoding='utf-8') as f:
     long_description = f.read()
@@ -7,7 +7,7 @@ packages = find_namespace_packages(include=('ajenga.router', 'ajenga.router.*'))
 
 setup(
     name='ajenga-router',
-    version='1.1.3',
+    version='1.2.0',
     url='https://github.com/project-ajenga/ajenga',
     license='MIT License',
     author='Hieuzest',

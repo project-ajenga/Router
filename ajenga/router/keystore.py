@@ -1,10 +1,6 @@
 import asyncio
-from ajenga.typing import Any
-from ajenga.typing import Dict
-from ajenga.typing import Hashable
-from ajenga.typing import Mapping
-from ajenga.typing import TypeVar
-from ajenga.typing import Union
+
+from ajenga.typing import Any, Dict, Hashable, Mapping, TypeVar, Union
 
 from .keyfunc import KeyFunction
 
@@ -15,7 +11,7 @@ class KeyStore:
     _tasks: Dict[Union[Hashable, KeyFunction], asyncio.Task]
     _store: Dict[Union[Hashable, KeyFunction], Any]
 
-    def __init__(self, items: Mapping = None):
+    def __init__(self, items: Mapping = {}):
         self._tasks = {}
         self._store = {}
         if items:

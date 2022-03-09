@@ -1,14 +1,11 @@
 from collections import deque
-from ajenga.typing import Iterable
-from ajenga.typing import Set
+from typing import Optional
+
+from ajenga.typing import Iterable, Set
 
 from ..exceptions import RouteException
-from .node import IdentityNode
-from .node import Node
-from .node import NonterminalNode
-from .node import TerminalNode
-
 from . import RouteResult_T
+from .node import IdentityNode, Node, NonterminalNode, TerminalNode
 
 
 class Graph:
@@ -135,7 +132,7 @@ class Graph:
     def __copy__(self):
         return self.copy()
 
-    def apply(self, terminal: TerminalNode = None) -> "Graph":
+    def apply(self, terminal: Optional[TerminalNode] = None) -> "Graph":
         """Apply graph to function, make the function terminal and create closed graph
 
         :param terminal:
@@ -147,7 +144,6 @@ class Graph:
             raise ValueError("Cannot apply on a closed graph!")
         g = self.copy()
         if terminal:
-            terminal = terminal
             for node in g.curve:
                 node.add_successor(terminal)
         g._closed = True
@@ -220,7 +216,7 @@ class Graph:
         g._or(other)
         return g
 
-    def route(self, *args, **kwargs) -> Set[RouteResult_T]:
+    async def route(self, *args, **kwargs) -> Set[RouteResult_T]:
         """Forward input to the graph, asynchronous invoke terminals and yield
 
         :param args:
@@ -230,7 +226,7 @@ class Graph:
         if not self.closed:
             raise ValueError("Cannot apply on a open graph!")
 
-        return self.start.route(*args, **kwargs)
+        return await self.start.route(*args, **kwargs)
 
         # res = set()
 

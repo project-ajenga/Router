@@ -1,12 +1,8 @@
 import heapq
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 from itertools import starmap
-from ajenga.typing import Callable
-from ajenga.typing import Generic
-from ajenga.typing import Iterable
-from ajenga.typing import List
-from ajenga.typing import TypeVar
+
+from ajenga.typing import Callable, Generic, Iterable, List, TypeVar
 
 _VT = TypeVar('_VT')
 _KT = TypeVar('_KT')
@@ -19,7 +15,7 @@ class PriorityQueue(Generic[_VT, _KT]):
         value: _VT = field(compare=False)
 
     def __init__(self, key_func: Callable[[_VT], _KT]):
-        self._container: List[self.PriorityQueueEntry[_VT, _KT]] = []
+        self._container: List[PriorityQueue.PriorityQueueEntry[_VT, _KT]] = []
         self._key_func = key_func
 
     def top(self, default: _VT = None):

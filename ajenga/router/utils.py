@@ -3,15 +3,9 @@ import inspect
 import typing
 import warnings
 from functools import wraps
-from ajenga.typing import Any
-from ajenga.typing import AsyncIterable
-from ajenga.typing import Awaitable
-from ajenga.typing import Callable
-from ajenga.typing import Collection
-from ajenga.typing import Coroutine
-from ajenga.typing import List, Dict
-from ajenga.typing import Union
-from ajenga.typing import TYPE_CHECKING
+
+from ajenga.typing import (TYPE_CHECKING, Any, AsyncIterable, Awaitable,
+                           Callable, Collection, Coroutine, Dict, List, Union)
 
 if TYPE_CHECKING:
     from .state import RouteState
@@ -97,7 +91,7 @@ async def consume_async_iterator(ait: AsyncIterable[T],
     return collection
 
 
-async def gather(*coroutines: Coroutine, num_workers: int = None, return_exceptions: bool = ...):
+async def gather(*coroutines: Coroutine, num_workers: int = 0, return_exceptions: bool = ...):
     if not num_workers:
         return await asyncio.gather(*coroutines, return_exceptions=return_exceptions)
 
@@ -141,7 +135,7 @@ async def gather(*coroutines: Coroutine, num_workers: int = None, return_excepti
 
 
 async def as_completed(*coroutines: Coroutine,
-                       num_workers: int = None,
+                       num_workers: int = 0,
                        return_exceptions: bool = True,
                        ) -> AsyncIterable:
     pending = set()

@@ -3,9 +3,8 @@ import contextvars
 import time
 from abc import ABC
 from asyncio import CancelledError
-from ajenga.typing import AsyncIterable
-from ajenga.typing import Optional
-from ajenga.typing import Set
+
+from ajenga.typing import AsyncIterable, Optional, Set
 
 from ..pqueue import PriorityQueue
 
@@ -82,10 +81,12 @@ class Task:
             try:
                 res = await self.fn(*args, **kwargs)
                 if not self.cancelled:
+                    assert self._future_return
                     self._future_return.set_result(res)
             except Exception as e:
                 # print(f'? {e} {type(e)}')
                 if not self.cancelled:
+                    assert self._future_return
                     self._future_return.set_exception(e)
             finally:
                 _task_context.reset(token)
@@ -130,6 +131,7 @@ class Task:
             return
 
         self._future_pause = self.loop.create_future()
+        assert self._future_return
         self._future_return.set_exception(_PauseException(self))
         try:
             res = await self._future_pause
@@ -149,6 +151,7 @@ class Task:
         self.last_active_time = time.time()
         self.executor = _executor_context.get(None)
         self._future_return = self.loop.create_future()
+        assert self._future_pause
         self._future_pause.set_result((args, kwargs))
         return self._future_return
 
@@ -159,6 +162,7 @@ class Task:
         self.last_active_time = time.time()
         self.executor = _executor_context.get(None)
         self._future_return = self.loop.create_future()
+        assert self._future_pause
         self._future_pause.set_exception(exception)
         return self._future_return
 
@@ -181,7 +185,9 @@ class Executor(ABC):
 
     @staticmethod
     def current() -> "Executor":
-        return Task.current().executor
+        exc = Task.current().executor
+        assert exc
+        return exc
 
 
 class SimpleExecutor(Executor):

@@ -1,25 +1,13 @@
-from ajenga.typing import AsyncIterable
-from ajenga.typing import Callable
-from ajenga.typing import Dict, Set
-from ajenga.typing import Hashable
-from ajenga.typing import Iterable
-from ajenga.typing import Union
-from ajenga.typing import final
-
 import pygtrie
+from ajenga.typing import (AsyncIterable, Callable, Dict, Hashable, Iterable,
+                           Set, Union, final)
 
-from .exceptions import RouteException
-from .exceptions import RouteInternalException
-from .models import AbsNode
-from .models import Node
-from .models import NonterminalNode
-from .models import TerminalNode
-from .keyfunc import KeyFunction
-from .keyfunc import KeyFunctionImpl
-from .std import first_argument
+from .exceptions import RouteException, RouteInternalException
+from .keyfunc import KeyFunction, KeyFunctionImpl
 from .keystore import KeyStore
+from .models import AbsNode, Node, NonterminalNode, RouteResult_T, TerminalNode
 from .state import RouteState
-from .models import RouteResult_T
+from .std import first_argument
 
 
 class AbsTrieNonterminalNode(NonterminalNode, AbsNode):
@@ -142,7 +130,7 @@ class PrefixNode(AbsTrieNonterminalNode):
             return {RouteInternalException(e)}
 
         if not isinstance(key, str):
-            return
+            raise ValueError(f'Key {key} to PrefixNode must be str!')
 
         # pair = self._successors.longest_prefix(key)
         for pair in self._successors.prefixes(key):

@@ -1,12 +1,7 @@
 from abc import ABC
-from ajenga.typing import Any
-from ajenga.typing import AsyncIterable
-from ajenga.typing import Dict
-from ajenga.typing import Hashable
-from ajenga.typing import Iterable
-from ajenga.typing import Set
-from ajenga.typing import Tuple
-from ajenga.typing import final, TYPE_CHECKING
+
+from ajenga.typing import (TYPE_CHECKING, Any, AsyncIterable, Dict, Hashable,
+                           Iterable, Set, Tuple, final)
 
 from ..state import RouteState
 from . import RouteResult_T
@@ -204,7 +199,7 @@ class AbsNode(Node, ABC):
         return self._predecessors.copy()
 
     @property
-    def predecessor_nodes(self) -> "Set[Tuple[NonterminalNode]]":
+    def predecessor_nodes(self) -> "Set[NonterminalNode]":
         return set(map(lambda e: e[0], self._predecessors))
 
     def add_predecessor(self, node: "Tuple[NonterminalNode, Hashable]"):

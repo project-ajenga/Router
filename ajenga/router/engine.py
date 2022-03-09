@@ -1,20 +1,13 @@
-from typing import Tuple
-from ajenga.typing import AsyncIterable
-from ajenga.typing import Callable
-from ajenga.typing import Iterable
-from ajenga.typing import Set
-from ajenga.typing import Type
-from ajenga.typing import final
+from typing import Optional, Tuple
+
+from ajenga.typing import AsyncIterable, Callable, Iterable, Set, Type, final
 
 from .exceptions import RouteException
 from .keystore import KeyStore
-from .models import Executor
-from .models import Graph
-from .models import Priority
-from .models import TerminalNode
+from .models import Executor, Graph, Priority, TerminalNode
 from .models.execution import PriorityExecutor
-from .std import HandlerNode
 from .state import RouteResult, RouteState
+from .std import HandlerNode
 
 
 class Engine:
@@ -67,8 +60,13 @@ class Engine:
         state.store['_store'] = state.store
         state.store['_state'] = state
         routed = await self._graph_impl.route(state)
-        terminals: Iterable[RouteResult] = filter(lambda x: isinstance(x, RouteResult), routed)
-        exceptions: Iterable[RouteException] = filter(lambda x: isinstance(x, RouteException), routed)
+        terminals: Iterable[RouteResult] = []
+        exceptions: Iterable[RouteException] = []
+        for routed_result in routed:
+            if isinstance(routed_result, RouteResult):
+                terminals.append(routed_result)
+            elif isinstance(routed_result, RouteException):
+                exceptions.append(routed_result)
 
         for e in exceptions:
             yield e.args[0]
@@ -79,7 +77,7 @@ class Engine:
             terminal = r.node
             mapping = r.mapping
             executor.create_task(terminal.forward,
-                                 priority=terminal.priority if hasattr(terminal, 'priority') else Priority.Default,
+                                 priority=getattr(terminal, 'priority') if hasattr(terminal, 'priority') else Priority.Default,
                                  args=(state, mapping,),
                                  )
     
@@ -101,7 +99,7 @@ class GraphImpl(Graph):
         super().__init__(**kwargs)
         self._engine = engine
 
-    def apply(self, terminal: TerminalNode = None) -> "Graph":
+    def apply(self, terminal: Optional[TerminalNode] = None) -> "Graph":
         return super().apply(terminal)
 
     def __call__(self, func) -> TerminalNode:

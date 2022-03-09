@@ -1,34 +1,18 @@
 from abc import ABC
 from functools import partial
-from ajenga.typing import Any
-from ajenga.typing import AsyncIterable
-from ajenga.typing import Awaitable
-from ajenga.typing import Callable
-from ajenga.typing import Dict
-from ajenga.typing import Hashable
-from ajenga.typing import Iterable
-from ajenga.typing import Set
-from ajenga.typing import Tuple
-from ajenga.typing import Type
-from ajenga.typing import final
+from typing import Optional
 
-from .exceptions import RouteException
-from .exceptions import RouteInternalException
-from .models import AbsNode
-from .models import Graph
-from .models import IdentityNode
-from .models import Node
-from .models import NonterminalNode
-from .models import TerminalNode
-from .keyfunc import KeyFunction
-from .keyfunc import KeyFunctionImpl
-from .keyfunc import KeyFunction_T
-from .keyfunc import PredicateFunction_T
-from .keyfunc import first_argument
+from ajenga.typing import (Any, AsyncIterable, Awaitable, Callable, Dict,
+                           Hashable, Iterable, Set, Tuple, Type, final)
+
+from .exceptions import RouteException, RouteInternalException
+from .keyfunc import (KeyFunction, KeyFunction_T, KeyFunctionImpl,
+                      PredicateFunction_T, first_argument)
 from .keystore import KeyStore
-from .utils import wrap_function
+from .models import (AbsNode, Graph, IdentityNode, Node, NonterminalNode,
+                     RouteResult_T, TerminalNode)
 from .state import RouteState
-from .models import RouteResult_T
+from .utils import wrap_function
 
 
 class RawHandlerNode(TerminalNode, AbsNode):
@@ -289,7 +273,7 @@ is_ = partial(make_graph_deco(EqualNode), key=KeyFunctionImpl(lambda _x_: type(_
 process = make_graph_deco(ProcessorNode)
 
 
-def store_(_name: str = None, _func: Callable = None, **kwargs) -> Graph:
+def store_(_name: Optional[str] = None, _func: Optional[Callable] = None, **kwargs) -> Graph:
     g = Graph()
     if _name and _func:
         g |= make_graph_deco(ProcessorNode)(KeyFunctionImpl(_func, key=_name))
