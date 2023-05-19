@@ -227,6 +227,7 @@ class PriorityExecutor(Executor):
         self.running_priority = Priority.Max
         self.running_futures: Set[asyncio.Future] = set()
         self.next_priority = True
+        self.num_finished = 0
 
     def create_task(self, fn, *, priority: int = 0, **kwargs):
         task = Task(fn, priority=priority, **kwargs)
@@ -268,6 +269,7 @@ class PriorityExecutor(Executor):
                 done, self.running_futures = await asyncio.wait(self.running_futures,
                                                                 return_when=asyncio.FIRST_COMPLETED)
                 for future in done:
+                    self.num_finished += 1
                     try:
                         yield await future
                     except _PauseException:
