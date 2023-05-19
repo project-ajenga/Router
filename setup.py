@@ -8,7 +8,7 @@ packages = find_namespace_packages(include=('ajenga.router',
 
 setup(
     name='ajenga-router',
-    version='1.3.1',
+    version='1.3.2',
     url='https://github.com/project-ajenga/ajenga',
     license='MIT License',
     author='Hieuzest',

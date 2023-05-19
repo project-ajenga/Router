@@ -214,7 +214,7 @@ class SimpleExecutor(Executor):
                 except _PauseException:
                     pass
                 except _ReturnException as e:
-                    yield e.args[0] if e.args else None
+                    yield e.args[1] if e.args else None
                 except Exception as e:
                     yield e
 
@@ -253,7 +253,8 @@ class PriorityExecutor(Executor):
                     self.running_priority = task.priority
                     self.running_futures.add(task.run(*args, **kwargs))
                 else:
-                    if self.next_priority and self.waiting_priority > Priority.Never:
+                    if self.next_priority and self.waiting_priority > Priority.Never and \
+                        len(self.running_futures) == 0:
                         self.running_priority = self.waiting_priority
 
                         while self.waiting_tasks \
@@ -277,7 +278,7 @@ class PriorityExecutor(Executor):
                     except _ReturnException as e:
                         if len(e.args) == 2:
                             _task: Task = e.args[0]
-                            if _task.count_finished:
+                            if getattr(_task, "count_finished", True):
                                 self.num_finished += 1
                             yield e.args[1]
                         else:
