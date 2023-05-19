@@ -82,7 +82,7 @@ class Task:
                 res = await self.fn(*args, **kwargs)
                 if not self.cancelled:
                     assert self._future_return
-                    self._future_return.set_result(res)
+                    self._future_return.set_exception(_ReturnException(self, res))
             except Exception as e:
                 # print(f'? {e} {type(e)}')
                 if not self.cancelled:
@@ -269,13 +269,19 @@ class PriorityExecutor(Executor):
                 done, self.running_futures = await asyncio.wait(self.running_futures,
                                                                 return_when=asyncio.FIRST_COMPLETED)
                 for future in done:
-                    self.num_finished += 1
+                    
                     try:
                         yield await future
                     except _PauseException:
                         pass
                     except _ReturnException as e:
-                        yield e.args[0] if e.args else None
+                        if len(e.args) == 2:
+                            _task: Task = e.args[0]
+                            if _task.count_finished:
+                                self.num_finished += 1
+                            yield e.args[1]
+                        else:
+                            yield None
                     except Exception as e:
                         yield e
         finally:

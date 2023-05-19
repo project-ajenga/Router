@@ -78,6 +78,7 @@ class Engine:
             mapping = r.mapping
             executor.create_task(terminal.forward,
                                  priority=getattr(terminal, 'priority') if hasattr(terminal, 'priority') else Priority.Default,
+                                 count_finished=getattr(terminal, 'count_finished') if hasattr(terminal, 'count_finished') else True,
                                  args=(state, mapping,),
                                  )
     
